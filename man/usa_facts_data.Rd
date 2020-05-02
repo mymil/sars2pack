@@ -98,17 +98,20 @@ Other data-import:
 \code{\link{jhu_us_data}()},
 \code{\link{kff_icu_beds}()},
 \code{\link{nytimes_county_data}()},
+\code{\link{param_estimates_published}()},
 \code{\link{us_county_geo_details}()},
 \code{\link{us_healthcare_capacity}()},
 \code{\link{us_state_distancing_policy}()}
 
 Other case-tracking: 
+\code{\link{align_to_baseline}()},
 \code{\link{beoutbreakprepared_data}()},
 \code{\link{covidtracker_data}()},
 \code{\link{ecdc_data}()},
 \code{\link{eu_data_cache_data}()},
 \code{\link{jhu_data}()},
-\code{\link{nytimes_county_data}()}
+\code{\link{nytimes_county_data}()},
+\code{\link{plot_epicurve}()}
 }
 \concept{case-tracking}
 \concept{data-import}

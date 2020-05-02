@@ -82,6 +82,7 @@ Other data-import:
 \code{\link{jhu_us_data}()},
 \code{\link{kff_icu_beds}()},
 \code{\link{nytimes_county_data}()},
+\code{\link{param_estimates_published}()},
 \code{\link{us_county_geo_details}()},
 \code{\link{us_healthcare_capacity}()},
 \code{\link{us_state_distancing_policy}()},
@@ -89,6 +90,9 @@ Other data-import:
 
 Other healthcare-system: 
 \code{\link{us_healthcare_capacity}()}
+
+Other projections: 
+\code{\link{cdc_aggregated_projections}()}
 }
 \author{
 Sean Davis \href{mailto:seandavi@gmail.com}{seandavi@gmail.com}
