@@ -1,0 +1,214 @@
+---
+title: "Allocating COVID-19 cases to finer grained spatial units"
+author: "Joe A. Wasserman"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Allocating COVID-19 cases to finer grained spatial units}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Allocating COVID-19 cases to finer grained spatial units
+
+```{r include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, message=FALSE,
+                      dev.args = list(png = list(type = "cairo")))
+```
+
+
+
+```{r setup}
+library(magrittr)
+library(skimr)
+library(jsonlite)
+library(roomba)
+library(zoo)
+library(tidycensus)
+library(sars2pack)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(purrr)
+library(ggplot2)
+library(ggthemes)
+
+options(tigris_use_cache = TRUE)
+```
+
+
+## Prepping the data from sars2pack
+Let's start with US county-level data from JHU and state-level data from the COVID Tracking Project.
+```{r load jhu}
+cusa = jhu_us_data()
+glimpse(cusa)
+```
+
+You will need to obtain a census API key and install it using `tidycensus::census_api_key`.
+
+```{r load census}
+census_api_key(coalesce(Sys.getenv("CENSUS_API_KEY"),"YOUR API KEY GOES HERE"))
+
+cv18 <- load_variables(2018, "acs5", cache = TRUE)
+
+View(cv18)
+
+# all the variables we might want to demographically weight allocation
+vars_acs5 <- cv18 %>% 
+  filter(concept %in% c("RACE")) #c("SEX BY AGE", "RACE"))
+
+# population broken out by race for Illinois
+acs_il_bg_raw <- get_acs(geography = "block group", state = "Illinois", variables = pull(vars_acs5, name), geometry = TRUE, keep_geo_vars = TRUE)
+
+glimpse(acs_il_bg_raw)
+```
+
+```{r munge acs}
+acs_il_bg <- acs_il_bg_raw %>% 
+  # filter(COUNTYFP %in% c("023", "024")) %>% 
+  separate(col = "NAME.y", into = c("block_group", "census_tract", "county", "state"), sep = ", ") %>% 
+  mutate_at(c("block_group", "census_tract"), ~ str_extract(., "\\d")) %>% 
+  inner_join(vars_acs5, by = c("variable" = "name")) %>% 
+  mutate(county = str_replace(county, " County", ""),
+         label = str_replace_all(label, ".+[[:punct:]]{2}", "")) %>% 
+  group_by(AFFGEOID) %>% 
+  mutate(variable = if_else(variable >= "B02001_007",
+                            "B02001_oth",
+                            variable),
+         label = if_else(variable == "B02001_oth",
+                            "SOme other race including two or more races",
+                            label),
+         estimate = if_else(variable == "B02001_oth",
+                            sum(estimate[variable == "B02001_oth"]),
+                            estimate),
+         moe = if_else(variable == "B02001_oth",
+                            sum(moe[variable == "B02001_oth"]),
+                            moe)) %>% 
+  ungroup() %>%
+  distinct(AFFGEOID, variable, .keep_all = TRUE) %>% 
+  group_by(county, variable) %>% 
+  mutate(pct_est = estimate/sum(estimate),
+         pct_moe = moe/sum(estimate)) %>% #this expectedly produces NaNs/Infs when estimates total 0
+  ungroup()
+
+# check that the calculation above worked as expected and all percentages sum back up to 1
+# if it doesn't, this test will print an error
+acs_il_bg %>% 
+  group_by(county, variable) %>% 
+  summarise(tot_pct = sum(pct_of_county)) %$% 
+  testthat::expect_equal(tot_pct, rep(1, length(tot_pct)))
+
+```
+
+```{r wrangle jhu}
+# create a county-level dataset
+cil_county <- tidycensus::county_laea %>% 
+  left_join(cusa %>% 
+              filter(state == "Illinois", date == max(date)),
+            by = c("GEOID" = "fips")) %>% 
+  filter(str_detect(GEOID, pattern = "^17"))
+```
+
+## Validate the method using zip code data
+1. allocate by ZCTA population + correlate with zip data
+2. weighted allocation by ZCTA population + race demographics, correlate with zip data (how much improvement?)
+
+```{r load and munge census zcta}
+acs_zcta_raw <- get_acs(geography = "zcta", variables = pull(vars_acs5, name),
+                      geometry = TRUE, keep_geo_vars = TRUE)
+
+glimpse(acs_zcta_raw)
+
+# ZCTA-to-county crosswalk
+zcta_county_rel_10_raw <- data.table::fread("http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt", keepLeadingZeros = TRUE)
+
+# retain only the ZCTA-CO record that represents the greatest % of ZCTA pop (IL only)
+zcta_county_rel_10 <- zcta_county_rel_10_raw %>% 
+  filter(STATE == "17") %>% 
+  group_by(ZCTA5) %>% 
+  arrange(-ZPOPPCT) %>% 
+  slice(1) %>% 
+  ungroup()
+
+acs_il_zcta <- acs_zcta_raw %>% 
+  inner_join(zcta_county_rel_10, by = c("ZCTA5CE10" = "ZCTA5")) %>% 
+  inner_join(vars_acs5, by = c("variable" = "name")) %>% 
+  mutate(label = str_replace_all(label, ".+[[:punct:]]{2}", "")) %>% 
+  group_by(AFFGEOID10) %>% 
+  mutate(variable = if_else(variable >= "B02001_007",
+                            "B02001_oth",
+                            variable),
+         label = if_else(variable == "B02001_oth",
+                            "SOme other race including two or more races",
+                            label),
+         estimate = if_else(variable == "B02001_oth",
+                            sum(estimate[variable == "B02001_oth"]),
+                            estimate),
+         moe = if_else(variable == "B02001_oth",
+                            sum(moe[variable == "B02001_oth"]),
+                            moe)) %>% 
+  ungroup() %>%
+  distinct(AFFGEOID10, variable, .keep_all = TRUE) %>% 
+  group_by(ZCTA5CE10, variable) %>% 
+  mutate(pct_est = estimate/sum(estimate),
+         pct_moe = moe/sum(estimate)) %>% #this expectedly produces NaNs/Infs when estimates total 0
+  ungroup()
+
+```
+
+```{r load il covid data by zip}
+# COVIDZipjson <- httr::GET(url = "https://www.dph.illinois.gov/sitefiles/COVIDZip.json")
+
+# https://www.dph.illinois.gov/covid19/covid19-statistics
+il_covid_zip_raw <- fromJSON("https://www.dph.illinois.gov/sitefiles/COVIDZip.json", simplifyVector = FALSE)
+
+# il_covid_zip_raw %>%
+#   str_c(.$year, "-", .$month, "-", .$day)
+
+il_covid_zip <- il_covid_zip_raw$zip_values %>% 
+  roomba(cols = c("zip", "confirmed_cases", "total_tested", "description", "age_group", "count"), keep = any) %>% 
+  mutate(zip = na.locf(zip))
+
+
+```
+
+## Apply the method to one state
+
+
+```{r cbg}
+# create a census block group-level dataset
+cil_cbg <- acs_il_bg %>% 
+  left_join(cusa %>% 
+              filter(state == "Illinois", date == max(date)),
+            by = c("state", "county")) %>% 
+  mutate(count_cbg = pmap_dbl(list(count, pct_of_county), multiply_by))
+```
+
+```{r plot county vs census block group}
+g_county <- cil_county %>% 
+  filter(subset == "confirmed") %>% 
+  ggplot(aes(label = county, fill = count))
+  
+g_county +
+  geom_sf(color = "white") +
+  scale_fill_viridis_c(option = "A", trans = "pseudo_log", breaks = c(10, 50, 100, 500, 1000, 5000, 10000, 50000)) +
+  ggthemes::theme_map()
+
+g_cbg <- cil_cbg %>% 
+  filter(subset == "confirmed") %>% 
+  ggplot(aes(label = str_c(county, block_group, sep = " "), fill = count_cbg))
+
+g_cbg +
+  geom_sf(color = "transparent") +
+  scale_fill_viridis_c(option = "A", trans = "pseudo_log", breaks = c(1, 5, 10, 50, 70)) +
+  ggthemes::theme_map()
+
+ggplotly()
+```
+
+## Apply the method to the entire country
+```{r}
+
+```
+
