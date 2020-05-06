@@ -46,6 +46,7 @@ Apple requires that all users agree to their terms of use.
 See \url{https://www.apple.com/covid19/mobility}.
 }
 \examples{
+
 res = apple_mobility_data()
 colnames(res)
 head(res)
@@ -87,6 +88,7 @@ if(require(plotly)) {
     ggplotly(pl)
 }
 
+
 }
 \references{
 \itemize{
@@ -97,6 +99,9 @@ if(require(plotly)) {
 Other data-import: 
 \code{\link{beoutbreakprepared_data}()},
 \code{\link{cdc_aggregated_projections}()},
+\code{\link{cdc_excess_deaths}()},
+\code{\link{cov_glue_lineage_data}()},
+\code{\link{cov_glue_newick_data}()},
 \code{\link{covidtracker_data}()},
 \code{\link{descartes_mobility_data}()},
 \code{\link{ecdc_data}()},
