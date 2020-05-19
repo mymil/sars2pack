@@ -34,15 +34,16 @@ us_state_distancing_policy = function() {
         dplyr::mutate(
             DateIssued = lubridate::ymd(DateIssued),
             DateEnacted = lubridate::ymd(DateEnacted),
-            DateEased = lubridate::ymd(DateEased),
             DateEnded = lubridate::ymd(DateEnded),
             DateExpiry = lubridate::ymd(DateExpiry),
             LastUpdated = lubridate::ymd(LastUpdated),
             Mandate = as.logical(Mandate),
-            StateFIPS = integer_to_fips(StateFIPS)
+            StateFIPS = integer_to_fips(StateFIPS),
+            StateWide = as.logical(StateWide),
+            Mandate = as.logical(Mandate)
         ) %>%
         dplyr::rename(
             state = 'StateName',
-            iso2  = 'StatePostal'
+            iso2c  = 'StatePostal'
         )
 }

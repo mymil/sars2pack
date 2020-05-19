@@ -53,7 +53,7 @@ j = jhu_data()
 head(j)
 colnames(j)
 
-add_incidence_column(j, grouping_columns=c('date','CountryRegion','ProvinceState'))
+add_incidence_column(j, grouping_columns=c('CountryRegion','ProvinceState'))
 
 # get top 10 countries by cumulative
 # number of cases
@@ -86,7 +86,15 @@ j_inc \%>\%
         geom_smooth() +
         ggtitle('Daily death counts in the top 10 most infected countries')
 
- 
+
+# Hospitalizations by day in Maryland
+covidtracker_data() \%>\%
+    filter(state=='MD') \%>\%
+    add_incidence_column(count_column='hospitalized') \%>\%
+    ggplot(aes(x=date,y=inc)) + geom_smooth() +
+    ylab("New Hospitalizations per day") +
+    ggtitle('Hospitalizations in Maryland', subtitle = 'From covidtracker')
+
 
 
 }

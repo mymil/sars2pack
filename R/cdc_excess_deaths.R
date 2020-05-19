@@ -56,14 +56,17 @@
 #' colnames(cdcdeaths)
 #' table(cdcdeaths$outcome)
 #'
+#' 
 #' # Examine excess deaths in three states
+#' library(ggplot2)
+#' library(dplyr)
 #' interesting_states = c('Ohio', 'Pennsylvania', 'California')
 #' ggplot(cdcdeaths %>% dplyr::filter(type=="Predicted (weighted)" &
 #'                             outcome=="All causes" &
 #'                             state %in% interesting_states),
 #'         aes(x=date,y=deaths)) +
-#'     geom_point(aes(color=deaths>threshold)) +
-#'     geom_line(aes(x=date,y=threshold)) +
+#'     geom_point(aes(color=deaths>upper_bound_threshold)) +
+#'     geom_line(aes(x=date,y=upper_bound_threshold)) +
 #'     facet_grid(rows=vars(state)) +
 #'     ggtitle('Excess deaths over time')
 #'
@@ -71,7 +74,7 @@
 #' 
 #' @export
 cdc_excess_deaths <- function() {
-    readr::read_csv("https://data.cdc.gov/api/views/xkkf-xrst/rows.csv?accessType=DOWNLOAD&bom=true&format=true",
+    dat = readr::read_csv("https://data.cdc.gov/api/views/xkkf-xrst/rows.csv?accessType=DOWNLOAD&bom=true&format=true",
                     guess_max = 10000,
                     col_types=cols()) %>%
         dplyr::rename(date='Week Ending Date') %>%
@@ -81,8 +84,10 @@ cdc_excess_deaths <- function() {
                    type="Type",
                    outcome="Outcome",
                    suppress="Suppress",
-                   deaths="Observed Number",
-                   threshold="Threshold") %>%
-        dplyr::select(date:threshold, type:suppress) %>%
+                   deaths="Observed Number"
+               ) %>%
         mutate(week_of_year=lubridate::week(date))
+    colnames(dat) = stringr::str_replace_all(colnames(dat),' ', '_') %>% tolower()
+    dat = dplyr::select(dat, -c(starts_with('total'), starts_with('percent'),year))
+    dat
 }

@@ -25,10 +25,21 @@ results, pending tests, and total people tested for each state or
 district currently reporting that data.
 }
 \examples{
+library(dplyr)
+library(ggplot2)
+
 res = covidtracker_data()
 colnames(res)
 dim(res)
 dplyr::glimpse(res)
+
+# Hospitalizations by day in Maryland
+covidtracker_data() \%>\%
+    dplyr::filter(state=='MD') \%>\%
+    add_incidence_column(count_column='hospitalized') \%>\%
+    ggplot(aes(x=date,y=inc)) + geom_smooth() +
+    ylab("New Hospitalizations per day") +
+    ggtitle('Hospitalizations in Maryland', subtitle = 'From covidtracker')
 
 
 }
@@ -43,6 +54,7 @@ Other data-import:
 \code{\link{beoutbreakprepared_data}()},
 \code{\link{cdc_aggregated_projections}()},
 \code{\link{cdc_excess_deaths}()},
+\code{\link{coronanet_government_response_data}()},
 \code{\link{cov_glue_lineage_data}()},
 \code{\link{cov_glue_newick_data}()},
 \code{\link{descartes_mobility_data}()},
@@ -57,7 +69,9 @@ Other data-import:
 \code{\link{nytimes_county_data}()},
 \code{\link{param_estimates_published}()},
 \code{\link{us_county_geo_details}()},
+\code{\link{us_county_health_rankings}()},
 \code{\link{us_healthcare_capacity}()},
+\code{\link{us_hospital_details}()},
 \code{\link{us_state_distancing_policy}()},
 \code{\link{usa_facts_data}()}
 
@@ -71,6 +85,7 @@ Other case-tracking:
 \code{\link{eu_data_cache_data}()},
 \code{\link{jhu_data}()},
 \code{\link{nytimes_county_data}()},
+\code{\link{owid_data}()},
 \code{\link{plot_epicurve}()},
 \code{\link{usa_facts_data}()}
 }

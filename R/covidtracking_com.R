@@ -30,16 +30,27 @@
 #' - \url{https://covidtracking.com/about-tracker/}
 #' - \url{https://covidtracking.com/notes/}
 #' 
-#' @importFrom readr read_csv
+#' @importFrom readr read_csv cols
 #' @importFrom dplyr select
 #'
 #' @return A tidy `tbl_df`
 #'
 #' @examples
+#' library(dplyr)
+#' library(ggplot2)
+#' 
 #' res = covidtracker_data()
 #' colnames(res)
 #' dim(res)
 #' dplyr::glimpse(res)
+#'
+#' # Hospitalizations by day in Maryland
+#' covidtracker_data() %>%
+#'     dplyr::filter(state=='MD') %>%
+#'     add_incidence_column(count_column='hospitalized') %>%
+#'     ggplot(aes(x=date,y=inc)) + geom_smooth() +
+#'     ylab("New Hospitalizations per day") +
+#'     ggtitle('Hospitalizations in Maryland', subtitle = 'From covidtracker')
 #' 
 #'
 #' @family data-import
@@ -55,6 +66,8 @@ covidtracker_data <- function() {
         ## of names in select statement.
         dplyr::select(.covidtracker_cols_to_keep)
     ret$date = lubridate::as_date(as.character(res$date))
+    coltypes = sapply(ret,class)
+    ret[,coltypes=='numeric'] = lapply(ret[,coltypes=='numeric'],as.integer)
     ret$fips = integer_to_fips(as.numeric(ret$fips))
     ret
 }

@@ -60,6 +60,7 @@ Other data-import:
 \code{\link{beoutbreakprepared_data}()},
 \code{\link{cdc_aggregated_projections}()},
 \code{\link{cdc_excess_deaths}()},
+\code{\link{coronanet_government_response_data}()},
 \code{\link{cov_glue_lineage_data}()},
 \code{\link{cov_glue_newick_data}()},
 \code{\link{covidtracker_data}()},
@@ -74,7 +75,9 @@ Other data-import:
 \code{\link{nytimes_county_data}()},
 \code{\link{param_estimates_published}()},
 \code{\link{us_county_geo_details}()},
+\code{\link{us_county_health_rankings}()},
 \code{\link{us_healthcare_capacity}()},
+\code{\link{us_hospital_details}()},
 \code{\link{us_state_distancing_policy}()},
 \code{\link{usa_facts_data}()}
 
@@ -88,6 +91,7 @@ Other case-tracking:
 \code{\link{estimate_Rt}()},
 \code{\link{eu_data_cache_data}()},
 \code{\link{nytimes_county_data}()},
+\code{\link{owid_data}()},
 \code{\link{plot_epicurve}()},
 \code{\link{usa_facts_data}()}
 }

@@ -48,7 +48,7 @@
 #' head(j)
 #' colnames(j)
 #'
-#' add_incidence_column(j, grouping_columns=c('date','CountryRegion','ProvinceState'))
+#' add_incidence_column(j, grouping_columns=c('CountryRegion','ProvinceState'))
 #'
 #' # get top 10 countries by cumulative
 #' # number of cases
@@ -81,7 +81,15 @@
 #'         geom_smooth() +
 #'         ggtitle('Daily death counts in the top 10 most infected countries')
 #'
-#'  
+#'
+#' # Hospitalizations by day in Maryland
+#' covidtracker_data() %>%
+#'     filter(state=='MD') %>%
+#'     add_incidence_column(count_column='hospitalized') %>%
+#'     ggplot(aes(x=date,y=inc)) + geom_smooth() +
+#'     ylab("New Hospitalizations per day") +
+#'     ggtitle('Hospitalizations in Maryland', subtitle = 'From covidtracker')
+#' 
 #' 
 #' 
 #' @export
@@ -95,9 +103,10 @@ add_incidence_column <- function(df, date_column='date', count_column='count',
         stop('Columns in date_column, count_column, grouping_columns must be included in:\n %s',paste(colnames(df),collapse=', '))
     }
     if(length(grouping_columns)>0) {
-        df1 = df1 %>% dplyr::group_by_(grouping_columns)
+        df1 = df1 %>% dplyr::group_by_at(grouping_columns)
     }
-    df1 = df1 %>% dplyr::mutate(inc = count - dplyr::lag(count, order_by = date))
+    df1 = df1 %>% dplyr::mutate(inc = get(count_column) - dplyr::lag(get(count_column),
+                                                                     order_by = get(date_column)))
     colnames(df1)[colnames(df1)=='inc']=incidence_col_name
     df1
 }
